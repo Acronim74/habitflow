@@ -22,6 +22,9 @@ function toggleCheck(habitId) {
     if (sched.length > 0 && done >= sched.length) {
       allDoneCelebration = true;
     }
+    if (h.night) {
+      setTimeout(() => showToast('🌙 Ночная привычка — засчитывается сегодня'), 600);
+    }
   }
 
   saveData();
@@ -234,6 +237,16 @@ function saveMood(idx, tk) {
   _renderMood(tk);
 }
 
+// ── Ночная привычка ───────────────────────
+
+function toggleNightCreate() {
+  _createNight = !_createNight;
+  const btn  = document.getElementById('nightToggleBtn');
+  const knob = document.getElementById('nightToggleKnob');
+  if (btn)  btn.style.background = _createNight ? 'var(--accent)' : 'var(--border2)';
+  if (knob) knob.style.left      = _createNight ? '23px' : '3px';
+}
+
 // ── Создание привычки ─────────────────────
 
 function openCreate(type) {
@@ -242,6 +255,7 @@ function openCreate(type) {
   _createIcon     = _createType === 'bad' ? '🚫' : '⭐';
   _createCat      = '';
   _createSchedule = null;
+  _createNight    = false;
 
   const modal = document.getElementById('createModal');
   modal.innerHTML = `
@@ -294,6 +308,23 @@ function openCreate(type) {
              placeholder="Зачем эта привычка?">
     </div>
 
+    <div class="field">
+      <div class="flex" style="justify-content:space-between;align-items:center">
+        <div>
+          <div class="field-label" style="margin-bottom:0">🌙 Ночная привычка</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">Выполняется поздно вечером или ночью</div>
+        </div>
+        <button type="button" id="nightToggleBtn" onclick="toggleNightCreate()"
+                style="width:44px;height:24px;border-radius:12px;border:none;cursor:pointer;
+                       position:relative;transition:background .2s;background:var(--border2)">
+          <span id="nightToggleKnob"
+                style="display:block;width:18px;height:18px;border-radius:50%;
+                       background:#fff;position:absolute;top:3px;
+                       transition:left .2s;left:3px"></span>
+        </button>
+      </div>
+    </div>
+
     <div class="modal-footer">
       <button type="button" class="btn btn-ghost" onclick="closeCreate()">Отмена</button>
       <button type="button" class="btn btn-primary" onclick="saveNewHabit()">Создать</button>
@@ -316,6 +347,7 @@ function openEdit(habitId) {
   _createSchedule = (!h.schedule || h.schedule.length === 0)
     ? null
     : [...h.schedule];
+  _createNight    = !!h.night;
 
   const modal = document.getElementById('createModal');
   modal.innerHTML = `
@@ -359,6 +391,24 @@ function openEdit(habitId) {
       <input class="field-input" id="createDesc"
              value="${esc(h.desc || '')}"
              placeholder="Зачем эта привычка?">
+    </div>
+
+    <div class="field">
+      <div class="flex" style="justify-content:space-between;align-items:center">
+        <div>
+          <div class="field-label" style="margin-bottom:0">🌙 Ночная привычка</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">Выполняется поздно вечером или ночью</div>
+        </div>
+        <button type="button" id="nightToggleBtn" onclick="toggleNightCreate()"
+                style="width:44px;height:24px;border-radius:12px;border:none;cursor:pointer;
+                       position:relative;transition:background .2s;
+                       background:${_createNight ? 'var(--accent)' : 'var(--border2)'}">
+          <span id="nightToggleKnob"
+                style="display:block;width:18px;height:18px;border-radius:50%;
+                       background:#fff;position:absolute;top:3px;
+                       transition:left .2s;left:${_createNight ? '23px' : '3px'}"></span>
+        </button>
+      </div>
     </div>
 
     <div class="modal-footer">
@@ -500,6 +550,7 @@ function saveNewHabit() {
       h.icon     = _createIcon;
       h.category = _createCat;
       h.desc     = desc;
+      h.night    = _createNight;
       h.schedule = _createType === 'bad' ? null : _createSchedule;
       saveData();
       renderAll();
@@ -517,6 +568,7 @@ function saveNewHabit() {
     category:  _createCat,
     desc,
     bad:       _createType === 'bad',
+    night:     _createNight,
     schedule:  _createType === 'bad' ? null : _createSchedule,
     checks:    {},
     slips:     {},
@@ -640,6 +692,7 @@ function _sanitizeHabit(h) {
     category:  typeof h.category === 'string' ? h.category.slice(0, 50)  : '',
     desc:      typeof h.desc === 'string'     ? h.desc.slice(0, 500)     : '',
     bad:       !!h.bad,
+    night:     !!h.night,
     schedule:  schedule && schedule.length > 0 ? schedule : null,
     checks:    (h.checks  && typeof h.checks  === 'object') ? h.checks  : {},
     slips:     (h.slips   && typeof h.slips   === 'object') ? h.slips   : {},

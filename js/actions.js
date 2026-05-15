@@ -28,6 +28,7 @@ function toggleCheck(habitId) {
   }
 
   saveData();
+  if (h.goalSource && h.checks[tk]) _checkGoalStageUnlock();
 
   const reduceMotion = typeof window.matchMedia === 'function'
     && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -803,6 +804,169 @@ function _unflipBadCard(habitId) {
     card.style.transform = 'rotateX(0deg)';
   });
   return true;
+}
+
+// ── Цели / Goals ────────────────────────────
+
+let _goalStartPending = null; // { goalId, skipKeys: [] }
+
+function openGoalSurvey(goalId) {
+  const goal = GOALS.find(g => g.id === goalId);
+  if (!goal) return;
+  _goalStartPending = { goalId, skipKeys: [] };
+
+  if (!goal.survey || goal.survey.length === 0) {
+    _openGoalArchiveWarning();
+    return;
+  }
+
+  const overlay = document.getElementById('goalSurveyOverlay');
+  const content = document.getElementById('goalSurveyContent');
+  if (!overlay || !content) return;
+
+  content.innerHTML = `
+    <p class="survey-intro">Пара вопросов — пропустим то, что ты уже делаешь.</p>
+    ${goal.survey.map(q => `
+      <div class="survey-q">
+        <p class="survey-q-text">${esc(q.q)}</p>
+        <div class="survey-q-btns">
+          <button type="button" class="btn btn-ghost survey-opt" onclick="setSurveyAnswer('${q.skip}',false,this)">Нет</button>
+          <button type="button" class="btn survey-opt survey-opt-yes" onclick="setSurveyAnswer('${q.skip}',true,this)">Да</button>
+        </div>
+      </div>`).join('')}
+    <div class="modal-footer">
+      <button type="button" class="btn btn-primary" onclick="submitGoalSurvey()">Далее →</button>
+    </div>`;
+
+  overlay.classList.add('open');
+}
+
+function setSurveyAnswer(skipKey, isYes, btn) {
+  btn.closest('.survey-q').querySelectorAll('.survey-opt').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (isYes) {
+    if (!_goalStartPending.skipKeys.includes(skipKey)) _goalStartPending.skipKeys.push(skipKey);
+  } else {
+    _goalStartPending.skipKeys = _goalStartPending.skipKeys.filter(k => k !== skipKey);
+  }
+}
+
+function submitGoalSurvey() {
+  document.getElementById('goalSurveyOverlay').classList.remove('open');
+  _openGoalArchiveWarning();
+}
+
+function closeGoalSurvey(e) {
+  if (e && e.target !== document.getElementById('goalSurveyOverlay')) return;
+  document.getElementById('goalSurveyOverlay').classList.remove('open');
+}
+
+function _openGoalArchiveWarning() {
+  if (!_goalStartPending) return;
+  const goal = GOALS.find(g => g.id === _goalStartPending.goalId);
+  const nonGoal = habits.filter(h => !h.goalSource);
+  const content = document.getElementById('goalArchiveContent');
+  const overlay = document.getElementById('goalArchiveOverlay');
+  if (!content || !overlay) return;
+
+  const skipped = _goalStartPending.skipKeys.length;
+  const habitCount = goal.stages[0].habits.length - skipped;
+
+  if (nonGoal.length > 0) {
+    const n = nonGoal.length;
+    const form = n === 1 ? 'привычка' : n < 5 ? 'привычки' : 'привычек';
+    content.innerHTML = `
+      <p class="arch-warn-text">Твои <strong>${n} ${form}</strong> перейдут в архив. Привычки цели <strong>${esc(goal.name)}</strong> станут основными.</p>
+      <p class="arch-warn-sub">Добавить свои привычки сможешь в любой момент — они будут идти отдельной секцией.</p>`;
+  } else {
+    content.innerHTML = `
+      <p class="arch-warn-text">Запустить цель <strong>${esc(goal.name)}</strong>? Первый этап добавит <strong>${habitCount} привычки</strong>.</p>`;
+  }
+
+  document.getElementById('goalArchiveConfirmBtn').onclick = () => {
+    overlay.classList.remove('open');
+    startGoal(_goalStartPending.goalId, _goalStartPending.skipKeys);
+    _goalStartPending = null;
+  };
+  overlay.classList.add('open');
+}
+
+function closeGoalArchiveWarning(e) {
+  if (e && e.target !== document.getElementById('goalArchiveOverlay')) return;
+  document.getElementById('goalArchiveOverlay').classList.remove('open');
+}
+
+function startGoal(goalId, skipKeys = []) {
+  const goal = GOALS.find(g => g.id === goalId);
+  if (!goal) return;
+  const today = _todayKey();
+
+  habits.filter(h => !h.goalSource).forEach(h => { h._archivedByGoal = true; archived.push(h); });
+  habits = habits.filter(h => h.goalSource && h.goalId === goalId);
+
+  goal.stages[0].habits
+    .filter(gh => !skipKeys.includes(gh.key))
+    .forEach(gh => habits.push(_makeGoalHabit(gh, goalId, 1, today)));
+
+  activeGoal = { goalId, stage: 1, startedAt: today, stageStartedAt: { 1: today, 2: null, 3: null } };
+  saveData();
+  renderAll();
+  navigate('today');
+  setTimeout(() => showToast('🎯 Цель запущена — вперёд!'), 200);
+}
+
+function confirmAbandonGoal() {
+  if (!confirm('Остановить цель? Твои привычки из архива будут восстановлены.')) return;
+  abandonGoal();
+}
+
+function abandonGoal() {
+  if (!activeGoal) return;
+  habits = habits.filter(h => !h.goalSource);
+  const toRestore = archived.filter(h => h._archivedByGoal);
+  toRestore.forEach(h => delete h._archivedByGoal);
+  habits.push(...toRestore);
+  archived = archived.filter(h => !h._archivedByGoal);
+  activeGoal = null;
+  saveData();
+  renderAll();
+  navigate('habits');
+  showToast('Цель остановлена. Привычки восстановлены.');
+}
+
+function _makeGoalHabit(gh, goalId, goalStage, today) {
+  return {
+    id: _uuid(), name: gh.name, good: true, bad: false, bonus: false, night: false,
+    icon: gh.icon || '🎯', category: '', schedule: null,
+    createdAt: today, checks: {}, times: {}, notes: {}, slips: {}, clean: {},
+    goalSource: true, goalId, goalStage, goalHabitKey: gh.key, _archivedByGoal: false,
+  };
+}
+
+function _goalHabitChecks(h) {
+  const stageStart = activeGoal?.stageStartedAt?.[h.goalStage];
+  if (!stageStart) return 0;
+  return Object.keys(h.checks || {}).filter(d => d >= stageStart).length;
+}
+
+function _checkGoalStageUnlock() {
+  if (!activeGoal) return;
+  const { goalId, stage } = activeGoal;
+  if (stage >= 3) return;
+  const stageHabits = habits.filter(h => h.goalId === goalId && h.goalStage === stage && !h.bad);
+  if (!stageHabits.length || !stageHabits.every(h => _goalHabitChecks(h) >= 21)) return;
+
+  const goal = GOALS.find(g => g.id === goalId);
+  const nextStage = goal?.stages.find(s => s.n === stage + 1);
+  if (!nextStage) return;
+
+  const today = _todayKey();
+  nextStage.habits.forEach(gh => habits.push(_makeGoalHabit(gh, goalId, stage + 1, today)));
+  activeGoal.stage = stage + 1;
+  activeGoal.stageStartedAt[stage + 1] = today;
+  saveData();
+  renderAll();
+  setTimeout(() => showToast(`🎉 Этап ${stage + 1} разблокирован! Новые привычки добавлены.`), 400);
 }
 
 

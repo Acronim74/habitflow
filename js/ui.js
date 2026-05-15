@@ -119,6 +119,7 @@ function renderScreen() {
   if (currentScreen === 'habits')    renderHabits();
   if (currentScreen === 'analytics') renderAnalytics();
   if (currentScreen === 'badges')    renderBadges();
+  if (currentScreen === 'goals')     renderGoals();
 }
 
 function renderAll() {

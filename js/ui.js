@@ -2146,14 +2146,14 @@ function _obSteps() {
     // ── Шаг 2: Цели ──
     `<div class="ob-ico">🎯</div>
      <div class="ob-title">Выбери цель — получи план</div>
-     <div class="ob-text">Три готовых 63-дневных трека. Каждый делится на 3 этапа по 21 дню —
+     <div class="ob-text">Пять готовых 63-дневных треков. Каждый делится на 3 этапа по 21 дню —
        привычки добавляются автоматически, одна ступень за другой.</div>
      <div class="ob-goals-preview">
        <div class="ob-goal-item">
          <span class="ob-goal-ico">⚡</span>
          <div>
            <div class="ob-goal-name">Больше энергии</div>
-           <div class="ob-goal-stages">Фундамент · Активация · Оптимизация</div>
+           <div class="ob-goal-stages">Основа · Активация · Оптимизация</div>
          </div>
        </div>
        <div class="ob-goal-item">
@@ -2168,6 +2168,20 @@ function _obSteps() {
          <div>
            <div class="ob-goal-name">Стать спокойнее</div>
            <div class="ob-goal-stages">Заземление · Регуляция · Устойчивость</div>
+         </div>
+       </div>
+       <div class="ob-goal-item">
+         <span class="ob-goal-ico">😴</span>
+         <div>
+           <div class="ob-goal-name">Наладить сон</div>
+           <div class="ob-goal-stages">Режим · Качество · Восстановление</div>
+         </div>
+       </div>
+       <div class="ob-goal-item">
+         <span class="ob-goal-ico">📵</span>
+         <div>
+           <div class="ob-goal-name">Меньше соцсетей</div>
+           <div class="ob-goal-stages">Осознанность · Контроль · Замена</div>
          </div>
        </div>
      </div>
@@ -2285,7 +2299,8 @@ const GUIDE_MODAL_HTML = `
 
   <div class="card">
     <div class="card-title">🎯 Цели</div>
-    <p>Три готовых 63-дневных трека: «Больше энергии», «Трать умнее», «Стать спокойнее».
+    <p>Пять готовых 63-дневных треков: «Больше энергии», «Трать умнее», «Стать спокойнее»,
+    «Наладить сон», «Меньше соцсетей».
     Каждый делится на 3 этапа по 21 дню — привычки добавляются автоматически по мере прохождения.</p>
   </div>
 
@@ -2306,7 +2321,7 @@ const GUIDE_MODAL_HTML = `
 
   <div class="card">
     <div class="card-title">Как работают цели</div>
-    <p>Выбери одну из трёх целей — привычки первого этапа (3 штуки) добавятся сразу.
+    <p>Выбери одну из пяти целей — привычки первого этапа (3 штуки) добавятся сразу.
     Твои существующие привычки уйдут в архив на время цели.</p>
     <div class="divider"></div>
     <p>Выполни каждую привычку <strong>21 раз</strong> — этап считается пройденным и
